@@ -56,7 +56,7 @@ def create_databases():
     print("\nCreating 'Smart Task Planner Calendar'...")
     calendar_payload = {
         "parent": { "type": "page_id", "page_id": parent_page_id },
-        "title": [ { "type": "text", "text": { "content": "Smart Task Planner Calendar" } } ],
+        "title": [ { "type": "text", "text": { "content": "ReAct Agent Calender" } } ],
         "properties": {
             "Event": { "title": {} },
             "Date": { "date": {} },
@@ -88,7 +88,7 @@ def create_databases():
     print("\nCreating 'Smart Task Planner Notes'...")
     notes_payload = {
         "parent": { "type": "page_id", "page_id": parent_page_id },
-        "title": [ { "type": "text", "text": { "content": "Smart Task Planner Notes" } } ],
+        "title": [ { "type": "text", "text": { "content": "ReAct Agent Notes" } } ],
         "properties": {
             "Note": { "title": {} },
             "Status": {
