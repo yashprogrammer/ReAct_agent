@@ -1,0 +1,93 @@
+name: Deploy to AWS EC2
+
+on:
+  push:
+    branches: [ "main" ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    
+    steps:
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            # Login to GHCR (might need a PAT if private, or use docker login with same creds if forwarded, typically easier to pull public or set up creds helper)
+            # Simplest for private packages: echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            # BUT secrets.GITHUB_TOKEN is local to the runner. The EC2 needs a PAT or pass it through.
+            # Using --password-stdin with a PAT stored in secrets is best. 
+            # Assuming PAT is stored as CR_PAT in secrets.
+            
+            echo "${{ secrets.CR_PAT }}" | docker login ghcr.io -u ${{ secrets.USERNAME }} --password-stdin
+
+            # Navigate to app dir (optional, or just run commands)
+            # mkdir -p app
+            # cd app
+            
+            # Since we used docker-compose in dev, we can use it here too if we copy it, or just run docker run.
+            # Let's assume we want to pull the latest image and run it.
+            
+            docker stop react_agent_container || true
+            docker rm react_agent_container || true
+            
+            # Pull image
+            # We need to construct the image name properly. 
+            # Ideally passthrough env var or hardcode repo name if stable.
+            # We'll rely on the user to replace 'user/repo' or pass it.
+            # actually better to just run the sequence:
+            
+            IMAGE_TAG=ghcr.io/${{ github.repository }}:main
+            docker pull $IMAGE_TAG
+            
+            # Run container
+            # Pass env vars from CI secrets to file or -e flags
+            docker run -d \
+              --name react_agent_container \
+              -p 8000:8000 \
+              --restart unless-stopped \
+              -e GOOGLE_API_KEY="${{ secrets.GOOGLE_API_KEY }}" \
+              -e GROQ_API_KEY="${{ secrets.GROQ_API_KEY }}" \
+              -e NOTION_API_KEY="${{ secrets.NOTION_API_KEY }}" \
+              -e NOTION_NOTES_DB_ID="${{ secrets.NOTION_NOTES_DB_ID }}" \
+              -e NOTION_CALENDAR_DB_ID="${{ secrets.NOTION_CALENDAR_DB_ID }}" \
+              $IMAGE_TAG
