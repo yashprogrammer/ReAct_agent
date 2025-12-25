@@ -52,7 +52,7 @@ jobs:
             username: ${{secrets.USERNAME}}
             key: ${{secrets.SSH_KEY}}
 
-            script:
+            script: |
                 echo "${{secrets.CR_PAT}}" | docker login ghcr.io -u ${{secrets.USERNAME}} --password-stdin
 
                 docker stop react_agent_container || true
