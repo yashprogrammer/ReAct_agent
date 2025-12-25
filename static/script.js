@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:8000';
+const API_URL = '';
 
 const chatForm = document.getElementById('chat-form');
 const userInput = document.getElementById('user-input');
