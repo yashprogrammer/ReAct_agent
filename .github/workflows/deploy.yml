@@ -59,7 +59,8 @@ jobs:
                 docker rm react_agent_container || true
 
 
-                IMAGE_TAG=ghcr.io/${{github.repository}}:main
+                REPO_LOWER=$(echo "${{github.repository}}" | tr '[:upper:]' '[:lower:]')
+                IMAGE_TAG=ghcr.io/$REPO_LOWER:main
                 docker pull $IMAGE_TAG
 
                 docker run -d \
